@@ -1,0 +1,896 @@
+<html>
+<head>
+<style>
+    #desk {
+        width: 400px;
+        height: 400px;
+
+    }
+
+    td {
+
+        width: 50px;
+        height: 50px;
+    }
+
+
+
+    .striped {
+        background-color: coral;
+    }
+
+    #log_hod {position:absolute;
+        top:30px;
+        left:500px;
+               }
+    
+</style>
+<script src="jquery.js"></script>
+<script type="text/javascript">
+
+//цвет шашки
+var color_shashki;
+// чья
+//цвет вражеской шашки
+var enemy_color;
+//чья очередь ходить
+var valid_turn;
+//переменная которая в последствии разрешает или запрещает ходить.
+var turn = true;
+var nomer_hoda = 0;
+
+
+
+
+//////////////////////////////// autoload
+$(function() {
+
+    valid_turn = "green";
+//раставляеш шашки (красные)
+    rows = $("tr");
+    $.each(rows, function() {
+        if ($(this).hasClass("row8") || $(this).hasClass("row7") || $(this).hasClass("row6")) {
+
+            var s_fishkoi = $(this).children();
+
+            $.each(s_fishkoi, function() {
+                if ($(this).hasClass("striped")) {
+
+                    $(this).html("<img src=" + "images/red.bmp" + " >");
+
+                }
+
+            }
+                    );
+        }
+    });
+
+// раставляем шашки (зеленые)
+    $.each(rows, function() {
+        if ($(this).hasClass("row1") || $(this).hasClass("row2") || $(this).hasClass("row3")) {
+
+            var s_fishkoi = $(this).children();
+
+            $.each(s_fishkoi, function() {
+                if ($(this).hasClass("striped")) {
+
+                    $(this).html("<img src=" + "images/green.bmp" + ">");
+
+                }
+
+            }
+                    );
+        }
+    });
+   //вешаем на td таблицы click событие котороые вызывает функцию check_chess
+    $("td").bind("click", check_chess);
+// вешаем на кнопку с id turn click событие которое вызывает функцию change_turn
+    $("#turn").bind("click", change_turn);
+    $("#cancel_move").bind("click",cancel_hod);
+
+});
+////////////////////////////////////////////////////////// check_shess
+
+
+function check_chess() {
+
+//находим img у этого td и смотрим его src
+    shashka = $(this).find("img");
+    color = $(this).find("img").attr("src");
+
+//если длинна img > 0 то изображение есть
+    if (shashka.length > 0) {
+        if (color == "images/green.bmp") {
+            color_shashki = "green";
+            simple_shashka = true;
+            damka = false;
+        }
+        if (color == "images/red.bmp") {
+            color_shashki = "red";
+            simple_shashka = true;
+            damka = false;
+        }
+        if (color == "images/damka_green.bmp") {
+            color_shashki = "green";
+            damka = true;
+            simple_shashka = false;
+        }
+        if (color == "images/damka_red.bmp") {
+            color_shashki = "red";
+            damka = true;
+            simple_shashka = false;
+        }
+
+// если цвет шашки совпадает с валидной очередью то turn = true;
+        if (color_shashki == valid_turn) {
+            turn = true;
+        } else {
+            alert("hodit" + valid_turn);
+            return;
+        }
+
+
+       
+        start_line = $(this).attr("line");
+        start_number = $(this).attr("number");
+        
+
+
+    }
+    // если изображения нет то это поле на которое мы хотим ходить
+    if (shashka.length == 0) {
+        end_line = $(this).attr("line");
+        end_number = $(this).attr("number");
+        hod_pole = true;
+
+    }
+    if (hod_pole == true) {
+        hod_shashka = false;
+        hod_pole = false;
+// если turn = true и шашка простая то вызываем функчию check_move
+        //  передавая ей стартовые позиции, конечные позиции, и цвет ходящец шашки
+        if (turn == true && simple_shashka == true && damka == false) {
+
+
+            if (check_move(start_line, start_number, end_line, end_number, color_shashki) == false) {
+                //если check_move вернуло false тоесть шашка не пошла значит вызываем функию атаки передавая
+                // ей теже парамертры
+                if (atack(start_line, start_number, end_line, end_number, color_shashki) == false) {
+                }
+
+            }
+
+        }
+        // если turn = true и шашка является дамнкой то вызываем функцию перемещения дамки
+        if (turn == true && damka == true && simple_shashka == false) {
+
+
+            if (damka_move(start_line, start_number, end_line, end_number, color_shashki) == false) {
+// если дамка не перепестилась то вызываем функицию атаки для дамки
+                if (damka_atack(start_line, start_number, end_line, end_number, color_shashki) == false) {
+ // елси нечего не переместилось и не пошло то ход не понятные
+                    alert("neponyatnii hod");
+                }
+
+
+            }
+        }
+
+
+    }
+
+
+}
+//////////////////////////////////////////check_move
+
+function check_move(start_line, start_number, end_line, end_number, color_shashki) {
+
+// для зеленой шашки
+    if (color_shashki == "green") {
+
+// линия для хода должны быть больше на 1 чем стартовая
+        check_line = end_line - start_line;
+        if (check_line == 1) {
+            line = true;
+        }
+        else {
+            line = false
+        }
+
+        //номер может быть больше больше на 1 или меньше на 1
+        number = end_number - start_number;
+
+
+        if (number == 1 || number == -1) {
+            number = true;
+        }
+// если линия и номер валидные то идем дальше
+        if ((line == true) && (number == true)) {
+
+// определяем стартовое поле через jquery выбираем td с классом striped у которого  number = стартовый номер
+            // и линия = стартовая линия
+            color =  $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").attr("src");
+            pole_start = $("td.striped[number=" + start_number + "][line=" + start_line + "]");
+            // находим в этом поле image
+            shashke_torba = $(pole_start).find("img");
+// убираем его
+            $(shashke_torba).remove();
+  // чистим набор чтобы при повторном вызоме через $ там уже не было image
+            $(shashke_torba).empty();
+            enemy = false;
+            id_enemy = false;
+       // находим конечное поле
+            pole_end = $("td.striped[number=" + end_number + "][line=" + end_line + "]");
+            //вписаваем туда image
+            $(pole_end).html("<img src=" + "images/green.bmp" + ">");
+            log(start_line,end_line,end_number,start_number,color,enemy,id_enemy);
+
+
+//вызывает функцию make_damke
+            make_damka(end_line, end_number, color_shashki);
+// возвращаем true
+            return true;
+
+
+        }
+        else {
+         // если не пошли возвращаем false
+            return false;
+        }
+
+    }
+
+    if (color_shashki == "red") {
+
+        // все тоже самое что и у if(color_shashki =="green") только end_line должна быть на 1 меньше чем start line
+
+
+        check_line = end_line - start_line;
+        if (check_line == -1) {
+            line = "valid";
+        }
+        else {
+            line = "invalid"
+        }
+        number = end_number - start_number;
+
+
+        if (number == 1 || number == -1) {
+            number = "valid";
+        }
+        else {
+            number = "invalid";
+        }
+
+        if ((line == "valid") && (number == "valid")) {
+            color =  $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").attr("src");
+
+
+            pole_start = $("td.striped[number=" + start_number + "][line=" + start_line + "]");
+            shashke_torba = $(pole_start).find("img");
+
+            $(shashke_torba).remove();
+            $(shashke_torba).empty();
+            pole_end = $("td.striped[number=" + end_number + "][line=" + end_line + "]");
+            $(pole_end).html("<img src=" + "images/red.bmp" + ">");
+            enemy = false;
+            id_enemy = false;
+            // вызывает функцию make damka
+            make_damka(end_line, end_number, color_shashki);
+            log(start_line,end_line,end_number,start_number,color,enemy,id_enemy);
+           // Возвращаем true
+            return true;
+
+
+        }
+        else {
+            return false;
+        }
+
+    }
+
+}
+
+function atack(start_line, start_number, end_line, end_number, color_shashki) {
+    check_line = end_line - start_line;
+    // опрежедяем расстояние по линиям для атаки оно должно быть больше на 2 или меньше на 2
+    if (check_line == 2 || check_line == -2) {
+        line = true;
+    }
+    else {
+        line = false
+    }
+    number = end_number - start_number;
+
+// номер тоже должен быть больше на 2 или меньше на 2
+    if (number == 2 || number == -2) {
+        number = true;
+    }
+    else {
+        number = false;
+    }
+    //если линия и номер нормальные вызываем check_checker которому передаем начальные и конечные позиции и цвет шашки
+
+    if ((line == true) && (number == true)) {
+        if (check_checker(end_line, end_number, start_line, start_number, color_shashki) == false) {
+            // если check_checker вернул false то возвращаем false
+            return false;
+        }
+        else {
+            //если true то возвращаем true
+            return true;
+        }
+
+    }
+
+
+}
+function check_checker(end_line, end_number, start_line, start_number, color_shashki) {
+
+    // вычисляем позицию которую на которой надо проверить есть ли там шашка
+
+    if (end_line > start_line) {
+        line = end_line * 1 - 1;
+    }
+    if (end_line < start_line) {
+        line = end_line * 1 + 1;
+    }
+    if (start_number > end_number) {
+        number = end_number * 1 + 1;
+    }
+    if (start_number < end_number) {
+        number = end_number * 1 - 1;
+    }
+// находим на это позиции image
+    enemy_checker = $("td.striped[number=" + number + "][line=" + line + "]").find("img");
+// если image есть то определяем есть цвет
+    if ($(enemy_checker).length > 0) {
+        enemy_color = $(enemy_checker).attr("src");
+
+        if (enemy_color == "images/green.bmp") {
+            enemy_color = "green";
+
+        }
+        if (enemy_color == "images/red.bmp") {
+            enemy_color = "red";
+        }
+
+  // если цвет найденого image нервен цвету ходящей шашки то шашка вражеская и мы ее удаляем
+        // после удаляем шашку из клетки с которой ходили а после добавляем ее на клетку в которую пришли
+        // затем вызываем make_damka и возвращаем true
+        if (enemy_color != color_shashki) {
+             enemy = $("td.striped[number=" + number + "][line=" + line + "]").find("img").attr("src");
+
+
+            color =      $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").attr("src");
+
+            $("td.striped[number=" + number + "][line=" + line + "]").find("img").remove();
+             id_enemy= $("td.striped[number=" + number + "][line=" + line + "]").attr("id");
+
+            $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").remove();
+            $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").empty();
+            pole_end = $("td.striped[number=" + end_number + "][line=" + end_line + "]");
+            $(pole_end).html("<img src=" + "images/" + color_shashki + ".bmp" + ">");
+
+            log(start_line,end_line,end_number,start_number,color,enemy,id_enemy);
+
+            make_damka(end_line, end_number, color_shashki);
+            return true;
+
+        }
+    }
+    // если в той клетке которую проверяли не найдено изабражений возвращаем false
+    return false;
+}
+
+function damka_move(start_line, start_number, end_line, end_number, color_shashki) {
+    // в зависимости от направления движения вычисляем линию по которой надо пройтись проверкой на наличие шашек
+
+    if (end_line > start_line && end_number > start_number) {
+
+        i = start_line * 1 + 1;
+        j = start_number * 1 + 1;
+        est_shashka = false;
+        while (i < end_line && j < end_number) {
+
+
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i++;
+            j++;
+
+            if (have_shashka(pole) == false) {
+
+                // если have_shashka вернула false то значит на одной из клеток на линии хода стоит шашка
+                est_shashka = true;
+            }
+            if (est_shashka == true) {
+                break;
+            }
+
+        }
+
+
+    }
+    if (end_line < start_line && end_number < start_number) {
+
+
+        i = start_line * 1 - 1;
+
+        j = start_number * 1 - 1;
+
+        est_shashka = false;
+        do {
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i--;
+            j--;
+            if (have_shashka(pole) == false) {
+                est_shashka = true;
+            }
+            if (est_shashka == true) {
+                break;
+            }
+        }
+        while (i > end_line && j > end_number)
+    }
+    if (end_line > start_line && end_number < start_number) {
+        i = start_line * 1 + 1;
+        j = start_number * 1 - 1;
+        est_shashka = false;
+        while (i < end_line && j > end_number) {
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i++;
+            j--;
+            if (have_shashka(pole) == false) {
+                est_shashka = true;
+            }
+            if (est_shashka == true) {
+                break;
+            }
+
+        }
+    }
+    if (end_line < start_line && end_number > start_number) {
+
+        i = start_line * 1 - 1;
+        j = start_number * 1 + 1;
+        est_shashka = false;
+        while (i > end_line && j < end_number) {
+            if (est_shashka == true) {
+                break;
+            }
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i--;
+            j++;
+            if (have_shashka(pole) == false) {
+                est_shashka = true;
+            }
+            if (est_shashka == true) {
+                break;
+            }
+        }
+    }
+    //если шашка не стоит
+
+        if (est_shashka == false) {
+            start_number = start_number * 1;
+            end_number = end_number * 1;
+            start_line = start_line * 1;
+            end_line = end_line * 1;
+            // то убираем шашку  с начальной позиции
+            color =  $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").attr("src");
+            $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").remove();
+            // опеределяем цвет далки по цвету шашки переданой функции
+            if (color_shashki == "red") {
+                image = "images/damka_red.bmp";
+            }
+            if (color_shashki == "green") {
+                image = "images/damka_green.bmp";
+            }
+            // и ставим на конечную позицию
+            $("td.striped[number=" + end_number + "][line=" + end_line + "]").html("<img src=" + image + ">");
+            // возвращаем true
+            enemy = false;
+            id_enemy = false
+
+             log(start_line,end_line,end_number,start_number,color,enemy,id_enemy);
+            return true;
+        }
+
+        if (est_shashka != false) {
+            // если шашка есть возвращаем false
+            return false;
+        }
+
+}
+
+function change_turn() {
+    // если сейчас ходят красные то меняем на зеленых и наоборот
+
+    switch (valid_turn) {
+        case "green":
+            valid_turn = "red"; return true;
+            break
+        case  "red":
+            valid_turn = "green"; return true;
+            break
+        default:
+            return false;
+            break
+    }
+}
+function make_damka(end_line, end_number, color_shashki) {
+    // смотрим поле на которое пришла фишка если фишка зеленая то на line=8 она становится дамкой
+    //  если красканя то на line =1
+    pole = $("td.striped[number=" + end_number + "][line=" + end_line + "]");
+    if (color_shashki == "green") {
+        if (end_line == 8) {
+            $(pole).find("img").remove();
+            $(pole).html("<img src=" + "images/damka_green.bmp" + ">");
+        }
+    }
+    if (color_shashki == "red") {
+        if (end_line == 1) {
+            $(pole).find("img").remove();
+            $(pole).html("<img src=" + "images/damka_red.bmp" + ">");
+        }
+    }
+}
+
+function have_shashka(object) {
+    // находим атрибут scr у обекта переданого в функцию и присваиваем его переменной color
+
+
+    color = $(object).find("img").attr("src");
+    // елси color совпадает с с хоть одним из возможных цветов
+    //  то возвращаем false иначе возвращаем true
+    //  можно было написать if (color!="undefined")
+    if (color == "images/damka_red.bmp" || color == "images/red.bmp" ||
+            color == "images/damka_green.bmp" || color == "images/green.bmp") {
+        return false;
+    }
+    else {
+        return true;
+    }
+
+
+}
+
+
+function damka_atack(start_line, start_number, end_line, end_number, color_shashki) {
+
+    // вычислчем траеторию хода дамки
+
+    if (end_line > start_line && end_number > start_number) {
+
+
+        i = start_line * 1 + 1;
+        j = start_number * 1 + 1;
+        // ставим счетчик шашек на 0
+        est_shashka = 0;
+        // в цикле проверяем все поля на наличие шашек и если есть шашка то вражеская ли она
+        while (i < end_line && j < end_number) {
+
+
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i++;
+            j++;
+            // проверяем есть ли шашка на проверяемом поле поле
+            if (have_shashka(pole) == false) {
+                // если есть шашка то увеличиваем счетчик шашек на 1
+                est_shashka++;
+                //объявляем поле с шашкой которая стоит на пути
+                pole_s_shashkoi = pole;
+               // елси have_enemy вернула false то шашка дружеская и выходим из цикла
+                is_enemy = have_enemy(pole, color_shashki);
+
+                if (!is_enemy) {
+                    break;
+                }
+
+            }
+
+
+        }
+    }
+    if (end_line < start_line && end_number < start_number) {
+
+
+        i = start_line * 1 - 1;
+
+        j = start_number * 1 - 1;
+
+        est_shashka = 0;
+        do {
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i--;
+            j--;
+            if (have_shashka(pole) == false) {
+                est_shashka++;
+                pole_s_shashkoi = pole;
+                if (have_enemy(pole, color_shashki) == true) {
+                    is_enemy = true;
+                }
+                
+                is_enemy = have_enemy(pole, color_shashki);
+                if (!is_enemy) {
+                    break;
+                }
+            }
+        } while (i > end_line && j > end_number)
+    }
+
+
+    if (end_line > start_line && end_number < start_number) {
+        i = start_line * 1 + 1;
+        j = start_number * 1 - 1;
+        est_shashka = 0;
+        while (i < end_line && j > end_number) {
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i++;
+            j--;
+            if (have_shashka(pole) == false) {
+                est_shashka++;
+                pole_s_shashkoi = pole;
+                debugger;
+                is_enemy = have_enemy(pole, color_shashki);
+                if (!is_enemy) {
+                    break;
+                }
+            }
+        }
+    }
+    if (end_line < start_line && end_number > start_number) {
+
+        i = start_line * 1 - 1;
+        j = start_number * 1 + 1;
+        est_shashka = 0;
+        while (i > end_line && j < end_number) {
+            if (est_shashka == true) {
+                break;
+            }
+            pole = $("td.striped[number=" + j + "][line=" + i + "]");
+            i--;
+            j++;
+            if (have_shashka(pole) == false) {
+                est_shashka++;
+                pole_s_shashkoi = pole;
+                debugger;
+                is_enemy = have_enemy(pole, color_shashki);
+                if (!is_enemy) {
+                    break;
+                }
+
+            }
+
+        }
+    }
+// если шашек больше одной то возвращаем false
+    if (est_shashka > 1) {
+        return false;
+    }
+    //если шашка одна и она вражеская то
+    if (est_shashka == 1 && is_enemy == true) {
+        enemy = $(pole_s_shashkoi).find("img").attr("src");
+
+        color =  $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").attr("src");
+
+// убираем шашку с начальной позиции
+        $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").remove();
+          $("td.striped[number=" + start_number + "][line=" + start_line + "]").find("img").empty();
+        // убираем шашку в поля с шашкой
+         id_enemy= $(pole_s_shashkoi).attr("id");
+        $(pole_s_shashkoi).find("img").remove();
+        $(pole_s_shashkoi).find("img").empty();
+
+        // и добавляем в зависимости от цвета шашки дамку на конечное поле
+        if (color_shashki == "green") {
+            $("td.striped[number=" + end_number + "][line=" + end_line + "]").html("<img src=" + "images/damka_green.bmp" + ">");
+
+        }
+        if (color_shashki == "red") {
+            $("td.striped[number=" + end_number + "][line=" + end_line + "]").html("<img src=" + "images/damka_red.bmp" + ">");
+        }
+// возращаем true0
+         log(start_line,end_line,end_number,start_number,color,enemy,id_enemy);
+        return true;
+    }
+    // если шашка одна но она не вражеская выводим alert и возвращаем false
+    if (est_shashka == 1 && is_enemy == false){alert("meshaet shashka");return false;}
+
+
+}
+function have_enemy(object, color_shashki) {
+    // в зависимости от цвета шашки находим image и его src и если он не противоположен цвету шакки то возвращаем false
+    // иначе возвращаем true
+    if (color_shashki == "green") {
+
+        color = $(object).find("img").attr("src");
+        if (color == "images/damka_red.bmp" || color == "images/red.bmp") {
+
+            return true;
+        }
+        else {
+            return false;
+        }
+
+
+    }
+    if (color_shashki == "red") {
+        color = $(object).find("img").attr("src");
+        if (color == "images/damka_green.bmp" || color == "images/green.bmp") {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+}
+function log(start_line,end_line,end_number,start_number,color_shashki,enemy,id_enemy){
+    nomer_hoda ++;
+ 
+
+
+    if (enemy == false){
+       start= $("td.striped[number=" + start_number + "][line=" + start_line + "]").attr("id");
+        end= $("td.striped[number=" + end_number + "][line=" + end_line + "]").attr("id");
+        text = nomer_hoda+","+color_shashki+","+start+","+end+",none,"+id_enemy;
+           $(".hod:last").after("<div class='hod'>"+text+"</div>"+"<br>");
+                        }
+
+    if(enemy != false){
+         start= $("td.striped[number=" + start_number + "][line=" + start_line + "]").attr("id");
+        end= $("td.striped[number=" + end_number + "][line=" + end_line + "]").attr("id");
+        text = nomer_hoda+","+color_shashki+","+start+","+end+","+enemy+","+id_enemy;
+
+        $(".hod:last").after("<div class='hod'>"+text+"</div>"+"<br>");
+
+    }
+}
+function cancel_hod (){
+    parametrs =  $(".hod:last").text();
+
+
+    arr = (parametrs).split(',');
+    
+
+            for (i=0;i<arr.length;i++){
+
+                 switch (i) {
+        case 0:
+            alert ("cancel moving");
+            break ;
+        case 1: color_shashki = arr[i]; break;
+        case 2: start_id = arr[i]; break;
+        case 3:  end_id = arr[i]; break;
+        case 4:  enemy_color = arr[i]; break;
+        case 5:  enemy_id = arr[i]; break;
+        default:
+            alert("error");
+            break ;
+    }
+     }
+    $("#"+start_id).html("<img src=" +color_shashki+ ">");
+    $("#"+end_id).find("img").remove();
+    if (enemy_color != false)
+                                {
+       $("#"+enemy_id).html("<img src=" +enemy_color+ ">");
+
+                                }
+    $(".hod:last").remove();
+}
+
+
+</script>
+
+</head>
+<body id="desk">
+
+<div id="log_hod" >
+ <div class="hod">move number,color,start,end,enemy,id_enemy</div>   
+
+</div>
+
+<table>
+    <tr class="row8">
+        <td id="A8" class="striped" number="8" line="8"></td>
+        <td id="B8" number="7" line="8"></td>
+        <td id="C8" class="striped" number="6" line="8"></td>
+        <td id="D8" number="5" line="8"></td>
+
+        <td id="E8" class="striped" number="4" line="8"></td>
+        <td id="F8" number="3" line="8"></td>
+        <td id="G8" class="striped" number="2" line="8"></td>
+        <td id="I8" number="1" line="8"></td>
+
+
+    </tr>
+    <tr class="row7">
+        <td id="A7" number="8" line="7"></td>
+        <td id="B7" class="striped" number="7" line="7"></td>
+        <td id="C7" number="6" line="7"></td>
+        <td id="D7" class="striped" number="5" line="7"></td>
+
+        <td id="E7" number="4" line="7"></td>
+        <td id="F7" class="striped" number="3" line="7"></td>
+        <td id="G7" number="2" line="7"></td>
+        <td id="I7" class="striped" number="1" line="7"></td>
+
+    </tr>
+    <tr class="row6">
+        <td id="A6" class="striped" number="8" line="6"></td>
+        <td id="B6" number="7" line="7"></td>
+        <td id="C6" class="striped" number="6" line="6"></td>
+        <td id="D6" number="5" line="7"></td>
+
+        <td id="E6" class="striped" number="4" line="6"></td>
+        <td id="F6" number="3" line="7"></td>
+        <td id="G6" class="striped" number="2" line="6"></td>
+        <td id="I6" number="1" line="7"></td>
+    </tr>
+    <tr class="row5">
+        <td id="A5" number="8" line="7"></td>
+        <td id="B5" class="striped" number="7" line="5"></td>
+        <td id="C5" number="6" line="7"></td>
+        <td id="D5" class="striped" number="5" line="5"></td>
+
+        <td id="E5" number="4" line="7"></td>
+        <td id="F5" class="striped" number="3" line="5"></td>
+        <td id="G5" number="2" line="7"></td>
+        <td id="I5" class="striped" number="1" line="5"></td>
+    </tr>
+    <tr class="row4">
+        <td id="A4" class="striped" number="8" line="4"></td>
+        <td id="B4" number="7" line="4"></td>
+        <td id="C4" class="striped" number="6" line="4"></td>
+        <td id="D4" number="5" line="4"></td>
+        <td id="E4" class="striped" number="4" line="4"></td>
+        <td id="F4" number="3" line="4"></td>
+        <td id="G4" class="striped" number="2" line="4"></td>
+        <td id="I4" number="1" line="4"></td>
+    </tr>
+    <tr class="row3">
+        <td id="A3" line="3" number="8"></td>
+        <td id="B3" class="striped" line="3" number="7"></td>
+        <td id="C3" line="3" number="6"></td>
+        <td id="D3" class="striped" line="3" number="5"></td>
+
+        <td id="E3" line="3" number="4"></td>
+        <td id="F3" class="striped" line="3" number="3"></td>
+        <td id="G3" line="3" number="2"></td>
+        <td id="I3" class="striped" line="3" number="1"></td>
+    </tr>
+    <tr class="row2">
+        <td id="A2" class="striped" number="8" line="2"></td>
+        <td id="B2" number="7" line="2"></td>
+        <td id="C2" class="striped" number="6" line="2"></td>
+        <td id="D2" number="5" line="2"></td>
+
+        <td id="E2" class="striped" number="4" line="2"></td>
+        <td id="F2" number="3" line="2"></td>
+        <td id="G2" class="striped" number="2" line="2"></td>
+        <td id="I2" number="1" line="2"></td>
+    </tr>
+    <tr class="row1">
+        <td id="A1" number="8" line="1"></td>
+        <td id="B1" class="striped" number="7" line="1"></td>
+        <td id="C1" number="6" line="1"></td>
+        <td id="D1" class="striped" number="5" line="1"></td>
+
+        <td id="E1" number="4" line="1"></td>
+        <td id="F1" class="striped" number="3" line="1"></td>
+        <td id="G1" number="2" line="1"></td>
+        <td id="I1" class="striped" number="1" line="1"></td>
+    </tr>
+</table>
+<br/>
+
+<div id="turn">
+    <input type="button" value="change turn">
+</div>
+<div id="cancel_move">
+    <input type="button" value="cancel move">
+</div>
+
+
+</body>
+</html>
